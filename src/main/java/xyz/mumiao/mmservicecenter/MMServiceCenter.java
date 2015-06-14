@@ -1,0 +1,201 @@
+package xyz.mumiao.mmservicecenter;
+
+import android.support.annotation.Nullable;
+
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.concurrent.locks.ReentrantLock;
+
+import android.util.Log;
+
+/**
+ * Created by song on 15/6/14.
+ */
+public class MMServiceCenter {
+    private static MMServiceCenter defaultServiceCenter;
+    private static boolean DebugMode = true;
+    private final ReentrantLock lock;
+    private HashMap<String, MMService> hashMapService;
+
+    private MMServiceCenter()
+    {
+        log("MMServiceCenter init");
+        lock = new ReentrantLock();
+        hashMapService = new HashMap<>();
+    }
+
+    public static void init()
+    {
+        defaultServiceCenter = new MMServiceCenter();
+    }
+
+    public static void configDebug(boolean isDebug)
+    {
+        DebugMode = isDebug;
+    }
+
+    @Nullable
+    public static MMServiceCenter defaultServiceCenter()
+    {
+        return defaultServiceCenter;
+    }
+
+    public static <T extends MMService> T getService(Class<T> cls)
+    {
+        defaultServiceCenter.lock.lock();
+
+        T obj = (T) defaultServiceCenter.hashMapService.get(cls.getName());
+        if (obj == null)
+        {
+            try {
+                obj = cls.newInstance();
+                log("getService:Create service object:" + obj);
+            } catch (InstantiationException e) {
+                log("getService:cls.newInstance()", e);
+            } catch (IllegalAccessException e)
+            {
+                log("getService:cls.newInstance()", e);
+            }
+
+            if (obj != null)
+            {
+                defaultServiceCenter.hashMapService.put(cls.getName(), obj);
+                obj.onServiceInit();
+            }
+            else
+            {
+                defaultServiceCenter.lock.unlock();
+            }
+
+        }
+        else
+        {
+            defaultServiceCenter.lock.unlock();
+        }
+
+        return obj;
+    }
+
+    public static <T extends MMService> void removeService(Class<T> cls)
+    {
+        defaultServiceCenter.lock.lock();
+
+        MMService obj = defaultServiceCenter.hashMapService.get(cls.getName());
+
+        if (obj == null)
+        {
+            defaultServiceCenter.lock.unlock();
+            return ;
+        }
+
+        defaultServiceCenter.hashMapService.remove(cls.getName());
+
+        obj.state.isServiceRemoved = true;
+
+        defaultServiceCenter.lock.unlock();
+    }
+
+    public static void callEnterForeground()
+    {
+        defaultServiceCenter.lock.lock();
+        Collection<MMService> arrayCopy = defaultServiceCenter.hashMapService.values();
+        defaultServiceCenter.lock.unlock();
+
+        Iterator<MMService> iterator = arrayCopy.iterator();
+
+        while (iterator.hasNext())
+        {
+            MMService service = iterator.next();
+            service.onServiceEnterForeground();
+        }
+    }
+
+    public static void callEnterBackground()
+    {
+        defaultServiceCenter.lock.lock();
+        Collection<MMService> arrayCopy = defaultServiceCenter.hashMapService.values();
+        defaultServiceCenter.lock.unlock();
+
+        Iterator<MMService> iterator = arrayCopy.iterator();
+
+        while (iterator.hasNext())
+        {
+            MMService service = iterator.next();
+            service.onServiceEnterBackground();
+        }
+    }
+
+    public static void callTerminate()
+    {
+        defaultServiceCenter.lock.lock();
+        Collection<MMService> arrayCopy = defaultServiceCenter.hashMapService.values();
+        defaultServiceCenter.lock.unlock();
+
+        Iterator<MMService> iterator = arrayCopy.iterator();
+
+        while (iterator.hasNext())
+        {
+            MMService service = iterator.next();
+            service.onServiceTerminate();
+        }
+    }
+
+    public static void callReloadData()
+    {
+        defaultServiceCenter.lock.lock();
+        Collection<MMService> arrayCopy = defaultServiceCenter.hashMapService.values();
+        defaultServiceCenter.lock.unlock();
+
+        Iterator<MMService> iterator = arrayCopy.iterator();
+
+        while (iterator.hasNext())
+        {
+            MMService service = iterator.next();
+            service.onServiceReloadData();
+        }
+    }
+
+    public static void callClearData()
+    {
+        defaultServiceCenter.lock.lock();
+        Collection<MMService> arrayCopy = defaultServiceCenter.hashMapService.values();
+        defaultServiceCenter.lock.unlock();
+        Iterator<MMService> iterator = arrayCopy.iterator();
+
+        while (iterator.hasNext())
+        {
+            MMService service = iterator.next();
+            service.onServiceClearData();
+            if (service.state.isServicePersistent == false)
+            {
+                // remove
+                removeService(service.getClass());
+            }
+            else
+            {
+                // keep
+            }
+        }
+    }
+
+    public static void log(String msg)
+    {
+        if (DebugMode)
+        {
+            Log.d("MMServiceCenter", msg);
+        }
+    }
+
+    public static void log(String msg, Exception e)
+    {
+        if (e == null )
+        {
+           if (DebugMode)Log.d("MMServiceCenter", msg);
+        }
+        else
+        {
+            Log.e("MMServiceCenter", msg, e);
+        }
+    }
+}
