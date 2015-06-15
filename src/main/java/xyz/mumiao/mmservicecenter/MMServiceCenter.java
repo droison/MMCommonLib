@@ -14,9 +14,9 @@ import android.util.Log;
  */
 public class MMServiceCenter {
     private static MMServiceCenter defaultServiceCenter;
-    private static boolean DebugMode = true;
+    private static boolean isDebugMode = true;
     private final ReentrantLock lock;
-    private HashMap<String, MMService> hashMapService;
+    private HashMap<String, MMServiceInterface> hashMapService;
 
     private MMServiceCenter()
     {
@@ -25,14 +25,16 @@ public class MMServiceCenter {
         hashMapService = new HashMap<>();
     }
 
-    public static void init()
+    public static MMServiceCenter init()
     {
-        defaultServiceCenter = new MMServiceCenter();
+        if (defaultServiceCenter == null)
+            defaultServiceCenter = new MMServiceCenter();
+        return defaultServiceCenter;
     }
 
     public static void configDebug(boolean isDebug)
     {
-        DebugMode = isDebug;
+        isDebugMode = isDebug;
     }
 
     @Nullable
@@ -41,7 +43,7 @@ public class MMServiceCenter {
         return defaultServiceCenter;
     }
 
-    public static <T extends MMService> T getService(Class<T> cls)
+    public static <T extends MMServiceInterface> T getService(Class<T> cls)
     {
         defaultServiceCenter.lock.lock();
 
@@ -77,11 +79,11 @@ public class MMServiceCenter {
         return obj;
     }
 
-    public static <T extends MMService> void removeService(Class<T> cls)
+    public static <T extends MMServiceInterface> void removeService(Class<T> cls)
     {
         defaultServiceCenter.lock.lock();
 
-        MMService obj = defaultServiceCenter.hashMapService.get(cls.getName());
+        MMServiceInterface obj = defaultServiceCenter.hashMapService.get(cls.getName());
 
         if (obj == null)
         {
@@ -99,14 +101,14 @@ public class MMServiceCenter {
     public static void callEnterForeground()
     {
         defaultServiceCenter.lock.lock();
-        Collection<MMService> arrayCopy = defaultServiceCenter.hashMapService.values();
+        Collection<MMServiceInterface> arrayCopy = defaultServiceCenter.hashMapService.values();
         defaultServiceCenter.lock.unlock();
 
-        Iterator<MMService> iterator = arrayCopy.iterator();
+        Iterator<MMServiceInterface> iterator = arrayCopy.iterator();
 
         while (iterator.hasNext())
         {
-            MMService service = iterator.next();
+            MMServiceInterface service = iterator.next();
             service.onServiceEnterForeground();
         }
     }
@@ -114,14 +116,14 @@ public class MMServiceCenter {
     public static void callEnterBackground()
     {
         defaultServiceCenter.lock.lock();
-        Collection<MMService> arrayCopy = defaultServiceCenter.hashMapService.values();
+        Collection<MMServiceInterface> arrayCopy = defaultServiceCenter.hashMapService.values();
         defaultServiceCenter.lock.unlock();
 
-        Iterator<MMService> iterator = arrayCopy.iterator();
+        Iterator<MMServiceInterface> iterator = arrayCopy.iterator();
 
         while (iterator.hasNext())
         {
-            MMService service = iterator.next();
+            MMServiceInterface service = iterator.next();
             service.onServiceEnterBackground();
         }
     }
@@ -129,14 +131,14 @@ public class MMServiceCenter {
     public static void callTerminate()
     {
         defaultServiceCenter.lock.lock();
-        Collection<MMService> arrayCopy = defaultServiceCenter.hashMapService.values();
+        Collection<MMServiceInterface> arrayCopy = defaultServiceCenter.hashMapService.values();
         defaultServiceCenter.lock.unlock();
 
-        Iterator<MMService> iterator = arrayCopy.iterator();
+        Iterator<MMServiceInterface> iterator = arrayCopy.iterator();
 
         while (iterator.hasNext())
         {
-            MMService service = iterator.next();
+            MMServiceInterface service = iterator.next();
             service.onServiceTerminate();
         }
     }
@@ -144,14 +146,14 @@ public class MMServiceCenter {
     public static void callReloadData()
     {
         defaultServiceCenter.lock.lock();
-        Collection<MMService> arrayCopy = defaultServiceCenter.hashMapService.values();
+        Collection<MMServiceInterface> arrayCopy = defaultServiceCenter.hashMapService.values();
         defaultServiceCenter.lock.unlock();
 
-        Iterator<MMService> iterator = arrayCopy.iterator();
+        Iterator<MMServiceInterface> iterator = arrayCopy.iterator();
 
         while (iterator.hasNext())
         {
-            MMService service = iterator.next();
+            MMServiceInterface service = iterator.next();
             service.onServiceReloadData();
         }
     }
@@ -159,13 +161,13 @@ public class MMServiceCenter {
     public static void callClearData()
     {
         defaultServiceCenter.lock.lock();
-        Collection<MMService> arrayCopy = defaultServiceCenter.hashMapService.values();
+        Collection<MMServiceInterface> arrayCopy = defaultServiceCenter.hashMapService.values();
         defaultServiceCenter.lock.unlock();
-        Iterator<MMService> iterator = arrayCopy.iterator();
+        Iterator<MMServiceInterface> iterator = arrayCopy.iterator();
 
         while (iterator.hasNext())
         {
-            MMService service = iterator.next();
+            MMServiceInterface service = iterator.next();
             service.onServiceClearData();
             if (service.state.isServicePersistent == false)
             {
@@ -181,7 +183,7 @@ public class MMServiceCenter {
 
     public static void log(String msg)
     {
-        if (DebugMode)
+        if (isDebugMode)
         {
             Log.d("MMServiceCenter", msg);
         }
@@ -191,7 +193,7 @@ public class MMServiceCenter {
     {
         if (e == null )
         {
-           if (DebugMode)Log.d("MMServiceCenter", msg);
+           if (isDebugMode)Log.d("MMServiceCenter", msg);
         }
         else
         {

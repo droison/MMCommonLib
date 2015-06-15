@@ -1,28 +1,36 @@
 package xyz.mumiao.mmservicecenter;
 
 /**
- * Created by song on 15/6/14.
+ * Created by song on 15/6/15.
  */
-public interface MMService {
+public abstract class MMService implements MMServiceInterface{
+    @Override
+    public void onServiceInit() {
 
-    MMServiceState state = new MMServiceState();
+    }
 
-    // call after yourservice create.
-    void onServiceInit();
-    // 切换帐号后，调用。
-    void onServiceReloadData();
-    // 进入后台运行
-    void onServiceEnterBackground();
-    // 进入前台运行
-    void onServiceEnterForeground();
-    // 程序退出
-    void onServiceTerminate();
-    // 退出登录时调用 用于清理资源.
-    void onServiceClearData();
+    @Override
+    public void onServiceReloadData() {
 
-    class MMServiceState
-    {
-        public boolean isServiceRemoved = false;
-        public boolean isServicePersistent = false;
+    }
+
+    @Override
+    public void onServiceEnterForeground() {
+
+    }
+
+    @Override
+    public void onServiceEnterBackground() {
+
+    }
+
+    @Override
+    public void onServiceClearData() {
+
+    }
+
+    @Override
+    public void onServiceTerminate() {
+
     }
 }
