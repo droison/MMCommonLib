@@ -3,56 +3,51 @@ package xyz.mumiao.mmbus;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
-public class DefaultHandlerFinder implements HandlerFinder {
+class DefaultHandlerFinder implements HandlerFinder {
 
     /**
      * Cache event bus subscriber methods for each class.
      */
-    private final Map<Class<?>, Map<Class<?>, Set<Method>>> SUBSCRIBERS_CACHE =
-            new HashMap<Class<?>, Map<Class<?>, Set<Method>>>();
+    private final Map<Class<?>, Map<Class<?>, Method>> SUBSCRIBERS_CACHE = new HashMap<Class<?>, Map<Class<?>, Method>>(); //接口类：（方法入参类：方法名） ，因此能保证一一对应，禁止一个接口有两个函数传参相同
 
     private void loadAnnotatedMethods(Class<?> listenerClass) {
-        Map<Class<?>, Set<Method>> subscriberMethods = new HashMap<Class<?>, Set<Method>>();
+        if (!listenerClass.isInterface())
+            throw new IllegalArgumentException("Class: " + listenerClass + " must be interface.");
 
+        Map<Class<?>, Method> subscriberMethods = new HashMap<Class<?>, Method>(); //包含该类所有方法的map， key:入参class，value:method
         for (Method method : listenerClass.getDeclaredMethods()) {
-            // The compiler sometimes creates synthetic bridge methods as part of the
-            // type erasure process. As of JDK8 these methods now include the same
-            // annotations as the original declarations. They should be ignored for
-            // subscribe/produce.
             if (method.isBridge()) {
                 continue;
             }
-            if (method.isAnnotationPresent(Override.class)) {
-                Class<?>[] parameterTypes = method.getParameterTypes();
-                if (parameterTypes.length != 1) {
-                    throw new IllegalArgumentException("Method " + method + " has @Subscribe annotation but requires "
-                            + parameterTypes.length + " arguments.  Methods must require a single argument.");
-                }
 
-                Class<?> eventType = parameterTypes[0];
-                if (eventType.isInterface()) {
-                    throw new IllegalArgumentException("Method " + method + " has @Subscribe annotation on " + eventType
-                            + " which is an interface.  Subscription must be on a concrete class type.");
-                }
 
-                if ((method.getModifiers() & Modifier.PUBLIC) == 0) {
-                    throw new IllegalArgumentException("Method " + method + " has @Subscribe annotation on " + eventType
-                            + " but is not 'public'.");
-                }
-
-                Set<Method> methods = subscriberMethods.get(eventType);
-                if (methods == null) {
-                    methods = new HashSet<Method>();
-                    subscriberMethods.put(eventType, methods);
-                }
-                methods.add(method);
+            Class<?>[] parameterTypes = method.getParameterTypes();
+            if (parameterTypes.length != 1) {
+                throw new IllegalArgumentException("Method " + method + " has @Subscribe annotation but requires "
+                        + parameterTypes.length + " arguments.  Methods must require a single argument.");
             }
-            SUBSCRIBERS_CACHE.put(listenerClass, subscriberMethods);
+
+            Class<?> eventType = parameterTypes[0];
+            if (eventType.isInterface()) {
+                throw new IllegalArgumentException("Method " + method + " has @Subscribe annotation on " + eventType
+                        + " which is an interface.  Subscription must be on a concrete class type.");
+            }
+
+            if ((method.getModifiers() & Modifier.PUBLIC) == 0) {
+                throw new IllegalArgumentException("Method " + method + " has @Subscribe annotation on " + eventType
+                        + " but is not 'public'.");
+            }
+
+            if (subscriberMethods.containsKey(eventType))
+            {
+                throw new IllegalArgumentException("Method " + method + " has parameterType " + eventType + " but has already exist.");
+            }
+            subscriberMethods.put(eventType, method);
         }
+        SUBSCRIBERS_CACHE.put(listenerClass, subscriberMethods);
+
     }
 
     @Override
@@ -62,20 +57,21 @@ public class DefaultHandlerFinder implements HandlerFinder {
         if (!SUBSCRIBERS_CACHE.containsKey(cls)) {
             loadAnnotatedMethods(cls);
         }
-        Map<Class<?>, Set<Method>> methods = SUBSCRIBERS_CACHE.get(cls);
+        Map<Class<?>, Method> methods = SUBSCRIBERS_CACHE.get(cls);
         if (!methods.isEmpty()) {
-            for (Map.Entry<Class<?>, Set<Method>> e : methods.entrySet()) {
-                for (Method m : e.getValue()) {
-                    handlersInMethod.put(keyFromSubscribers(cls, e.getKey()), new EventHandler<T>(listener, m));
-                }
+            for (Map.Entry<Class<?>, Method> e : methods.entrySet()) {
+                handlersInMethod.put(keyFromSubscribers(cls,"", e.getKey()), new EventHandler<T>(listener, e.getValue()));
             }
         }
         return handlersInMethod;
     }
 
-
     @Override
-    public String keyFromSubscribers(Class<?> keyClass, Class<?> eventClass) {
-        return keyClass.getName() + "-" + eventClass.getName();
+    public String keyFromSubscribers(Class<?> keyClass, String methodName, Class<?>... eventClass) {
+        StringBuilder methodParaStr = new StringBuilder();
+        for (Class<?> cls: eventClass ) {
+            methodParaStr.append("-").append(cls.getName());
+        }
+        return keyClass.getName() + "-" + methodParaStr.toString();
     }
 }

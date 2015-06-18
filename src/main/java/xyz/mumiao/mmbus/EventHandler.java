@@ -31,7 +31,7 @@ import java.lang.reflect.Method;
  *
  * @author Cliff Biffle
  */
-public class EventHandler<T> {
+class EventHandler<T> {
 
   /** Object sporting the handler method. */
   private final T target;
@@ -81,7 +81,7 @@ public class EventHandler<T> {
    * @throws InvocationTargetException  if the wrapped method throws any {@link Throwable} that is not
    *     an {@link Error} ({@code Error}s are propagated as-is).
    */
-  public void handleEvent(Object event) throws InvocationTargetException {
+  public void handleEvent(Object... event) throws InvocationTargetException {
     if (!valid) {
       throw new IllegalStateException(toString() + " has been invalidated and can no longer handle events.");
     }
