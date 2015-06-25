@@ -51,9 +51,47 @@ class StrictHandlerFindler  implements HandlerFinder {
     public String keyFromSubscribers(Class<?> keyClass, String methodName, Class<?>... eventClass) {
         StringBuilder methodParaStr = new StringBuilder();
         for (Class<?> cls: eventClass ) {
+            cls = convertBaseDataType(cls);
             methodParaStr.append("-").append(cls.getName());
         }
         return keyClass.getName() + "-" + methodName + methodParaStr.toString();
+    }
+
+    private Class<?> convertBaseDataType(Class<?> cls)
+    {
+        if (cls.equals(int.class))
+        {
+            cls = Integer.class;
+        }
+        else if (cls.equals(long.class))
+        {
+            cls = Long.class;
+        }
+        else if (cls.equals(short.class))
+        {
+            cls = Short.class;
+        }
+        else if (cls.equals(float.class))
+        {
+            cls = Float.class;
+        }
+        else if (cls.equals(double.class))
+        {
+            cls = Double.class;
+        }
+        else if (cls.equals(char.class))
+        {
+            cls = Character.class;
+        }
+        else if (cls.equals(boolean.class))
+        {
+            cls = Boolean.class;
+        }
+        else if (cls.equals(byte.class))
+        {
+            cls = Byte.class;
+        }
+        return cls;
     }
 }
 

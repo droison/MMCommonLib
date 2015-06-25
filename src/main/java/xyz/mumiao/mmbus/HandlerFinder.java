@@ -20,7 +20,7 @@ import java.util.Map;
 import java.util.Set;
 
 /** Finds producer and subscriber methods. */
-public interface HandlerFinder {
+interface HandlerFinder {
   <T> Map<String, EventHandler<T>>  findAllSubscribers(Class<T> cls, T listener);
   String keyFromSubscribers(Class<?> keyClass, String methodName, Class<?>... eventClass);
 }

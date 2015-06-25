@@ -20,7 +20,8 @@ import xyz.mumiao.mmservicecenter.MMService;
 public class MMBus extends MMService {
 
     private static MMBus strictBus;
-    private static MMBus defaultBus;
+
+    private boolean isStrictMode;
 
     public static MMBus getStrictBus() {
         if (strictBus == null) {
@@ -29,14 +30,7 @@ public class MMBus extends MMService {
         return strictBus;
     }
 
-    public static MMBus getDefaultBus() {
-        if (defaultBus == null) {
-            defaultBus = new MMBus(ThreadEnforcer.MAIN, "DefaultBus", new DefaultHandlerFinder());
-        }
-        return defaultBus;
-    }
-
-    public static final String DEFAULT_IDENTIFIER = "defaultBus";
+    public static final String DEFAULT_IDENTIFIER = "DefaultBus";
 
     /**
      * All registered event handlers, indexed by event type.
@@ -100,6 +94,7 @@ public class MMBus extends MMService {
         this.enforcer = enforcer;
         this.identifier = identifier;
         this.handlerFinder = handlerFinder;
+        isStrictMode = handlerFinder instanceof StrictHandlerFindler;
     }
 
     @Override
@@ -161,7 +156,6 @@ public class MMBus extends MMService {
             if (currentHandlers == null || !currentHandlers.contains(eventMethodsInListener)) {
                 throw new IllegalArgumentException("Missing event handler for an annotated method. Is " + object.getClass() + " registered?");
             }
-
             eventMethodsInListener.invalidate();
             currentHandlers.remove(eventMethodsInListener);
         }
@@ -176,6 +170,9 @@ public class MMBus extends MMService {
         }
 
         enforcer.enforce(this);
+        if (isStrictMode)
+            throw new IllegalStateException("when isStrictMode is true, post must contain targeMethodName");
+
 
         Set<Class<?>> dispatchTypes = flattenHierarchy(event.getClass());
 
@@ -205,6 +202,8 @@ public class MMBus extends MMService {
         }
 
         enforcer.enforce(this);
+        if (!isStrictMode)
+            throw new IllegalStateException("when isStrictMode is false, post cannot contain targeMethodName");
 
         //TODO 和上面的post相比，这个却别在于要严格要求传入参数的类型，不能为子类传输，否则报错，这里以后可以做优化
 
@@ -220,9 +219,8 @@ public class MMBus extends MMService {
                 methodParaStr.append(" ").append(cls.getName());
             }
 
-            Method method = null;
             try {
-                method = keyClass.getMethod(targeMethodName, getMethodParameterTypes(args));
+                keyClass.getMethod(targeMethodName, getMethodParameterTypes(args));
             }
             catch (NoSuchMethodException e)
             {
