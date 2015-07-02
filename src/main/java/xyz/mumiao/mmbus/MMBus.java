@@ -3,7 +3,7 @@ package xyz.mumiao.mmbus;
 import android.util.Log;
 
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -22,6 +22,8 @@ public class MMBus extends MMService {
     private static MMBus strictBus;
 
     private boolean isStrictMode;
+
+    public static boolean isDebugMode;
 
     public static MMBus getStrictBus() {
         if (strictBus == null) {
@@ -205,28 +207,34 @@ public class MMBus extends MMService {
         if (!isStrictMode)
             throw new IllegalStateException("when isStrictMode is false, post cannot contain targeMethodName");
 
-        //TODO 和上面的post相比，这个却别在于要严格要求传入参数的类型，不能为子类传输，否则报错，这里以后可以做优化
+        //20150702完成TODO 和上面的post相比，这个却别在于要严格要求传入参数的类型，不能为子类传输，否则报错，这里以后可以做优化
+        Class<?> curClassArray[] = getMethodParameterTypes(args);
+        Set<Class<?>[]> allClassArry = flattenHierarchy(curClassArray);
 
-        Set<EventHandler> wrappers = getHandlersForEventType(handlerFinder.keyFromSubscribers(keyClass, targeMethodName, getMethodParameterTypes(args)));
+        for (Class<?>[] array : allClassArry)
+        {
+            Set<EventHandler> wrappers = getHandlersForEventType(handlerFinder.keyFromSubscribers(keyClass, targeMethodName, array));
+            if (wrappers != null && !wrappers.isEmpty()) {
+                for (EventHandler wrapper : wrappers) {
+                    enqueueEvent(wrapper, args);
+                }
+            } else {
+                if (isDebugMode)
+                {
+                    StringBuilder methodParaStr = new StringBuilder();
+                    for (Class<?> cls : getMethodParameterTypes(args)) {
+                        methodParaStr.append(" ").append(cls.getName());
+                    }
 
-        if (wrappers != null && !wrappers.isEmpty()) {
-            for (EventHandler wrapper : wrappers) {
-                enqueueEvent(wrapper, args);
+                    try {
+                        keyClass.getMethod(targeMethodName, getMethodParameterTypes(args));
+                    }
+                    catch (NoSuchMethodException e)
+                    {
+                        Log.e("MMBus", "post方法名错误或者传参错误：keyClass=" + keyClass.getName() + ",targeMethodName=" + targeMethodName + ",args=" + methodParaStr.toString(), e);
+                    }
+                }
             }
-        } else {
-            StringBuilder methodParaStr = new StringBuilder();
-            for (Class<?> cls : getMethodParameterTypes(args)) {
-                methodParaStr.append(" ").append(cls.getName());
-            }
-
-            try {
-                keyClass.getMethod(targeMethodName, getMethodParameterTypes(args));
-            }
-            catch (NoSuchMethodException e)
-            {
-                Log.e("MMBus", "post方法名错误或者传参错误：keyClass=" + keyClass.getName() + ",targeMethodName=" + targeMethodName + ",args=" + methodParaStr.toString(), e);
-            }
-
         }
 
         dispatchQueuedEvents();
@@ -326,6 +334,55 @@ public class MMBus extends MMService {
         return classes;
     }
 
+    Set<Class<?>[]> flattenHierarchy(Class<?>[] concreteClass) {
+        Set<Class<?>[]> classes = flattenArrayHierarchyCache.get(concreteClass);
+        if (classes == null) {
+            int length = concreteClass.length;
+            List<Set<Class<?>>> multiClassList = new ArrayList<>();
+            for (int i = 0; i < length; i++)
+            {
+                Class<?> curClass = concreteClass[i];
+                multiClassList.add(flattenHierarchy(curClass));
+            }
+            final Set<Class<?>[]> resultSet = new HashSet<>();
+            Class<?>[] result = new Class[length];
+            classMultiFlatten(multiClassList, 0, result, new ClassMultiFlattenInterface() {
+                @Override
+                public void complete(Class<?>[] result) {
+                    resultSet.add(result);
+                }
+            });
+            flattenArrayHierarchyCache.put(concreteClass, resultSet);
+            classes = resultSet;
+        }
+
+        return classes;
+    }
+
+    void classMultiFlatten(List<Set<Class<?>>> concreteClass, int index, Class<?>[] result, ClassMultiFlattenInterface callback)
+    {
+        Set<Class<?>> curClasses = concreteClass.get(index);
+        for (Class<?> cur : curClasses)
+        {
+            result[index] = cur;
+            if (index == concreteClass.size() - 1)
+            {
+                Class<?>[] clone = result.clone();
+                callback.complete(clone);
+            }
+            else
+            {
+                classMultiFlatten(concreteClass, index + 1, result, callback);
+            }
+        }
+    }
+
+    interface ClassMultiFlattenInterface
+    {
+        void complete(Class<?>[] result);
+    }
+
+
     private Set<Class<?>> getClassesFor(Class<?> concreteClass) {
         List<Class<?>> parents = new LinkedList<Class<?>>();
         Set<Class<?>> classes = new HashSet<Class<?>>();
@@ -360,6 +417,9 @@ public class MMBus extends MMService {
 
     private final Map<Class<?>, Set<Class<?>>> flattenHierarchyCache =
             new HashMap<Class<?>, Set<Class<?>>>();
+
+    private final Map<Class<?>[], Set<Class<?>[]>> flattenArrayHierarchyCache =
+            new HashMap<Class<?>[], Set<Class<?>[]>>();
 
     /**
      * Simple struct representing an event and its handler.
