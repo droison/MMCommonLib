@@ -5,8 +5,7 @@ package xyz.mumiao.mmservicecenter;
  */
 public interface MMServiceInterface {
 
-    MMServiceState state = new MMServiceState();
-
+    MMServiceState getServiceState();
     // call after yourservice create.
     void onServiceInit();
     // 切换帐号后，调用。

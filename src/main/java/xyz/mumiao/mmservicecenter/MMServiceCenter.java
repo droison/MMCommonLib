@@ -95,7 +95,7 @@ public class MMServiceCenter {
 
         defaultServiceCenter.hashMapService.remove(cls.getName());
 
-        obj.state.isServiceRemoved = true;
+        obj.getServiceState().isServiceRemoved = true;
 
         defaultServiceCenter.lock.unlock();
     }
@@ -173,7 +173,7 @@ public class MMServiceCenter {
         {
             MMServiceInterface service = iterator.next();
             service.onServiceClearData();
-            if (!service.state.isServicePersistent)
+            if (!service.getServiceState().isServicePersistent)
             {
                 // remove
                 classArrayList.add(service.getClass());
