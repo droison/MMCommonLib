@@ -143,6 +143,7 @@ public class MMServiceCenter {
             MMServiceInterface service = iterator.next();
             service.onServiceTerminate();
         }
+        defaultServiceCenter.hashMapService.clear();
     }
 
     public static void callReloadData()
