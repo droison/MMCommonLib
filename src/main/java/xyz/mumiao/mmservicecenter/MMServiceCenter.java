@@ -2,9 +2,11 @@ package xyz.mumiao.mmservicecenter;
 
 import android.support.annotation.Nullable;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
 import android.util.Log;
@@ -165,19 +167,21 @@ public class MMServiceCenter {
         defaultServiceCenter.lock.unlock();
         Iterator<MMServiceInterface> iterator = arrayCopy.iterator();
 
+        List<Class<? extends MMServiceInterface>> classArrayList = new ArrayList<>();
         while (iterator.hasNext())
         {
             MMServiceInterface service = iterator.next();
             service.onServiceClearData();
-            if (service.state.isServicePersistent == false)
+            if (!service.state.isServicePersistent)
             {
                 // remove
-                removeService(service.getClass());
+                classArrayList.add(service.getClass());
             }
-            else
-            {
-                // keep
-            }
+
+        }
+        for (Class<? extends MMServiceInterface> serviceClass : classArrayList)
+        {
+            removeService(serviceClass);
         }
     }
 
