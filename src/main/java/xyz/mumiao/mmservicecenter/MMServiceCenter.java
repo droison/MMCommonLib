@@ -146,6 +146,9 @@ public class MMServiceCenter {
         defaultServiceCenter.lock.unlock();
     }
 
+    /**
+     * 程序后台转前台调用
+     */
     public static void callEnterForeground()
     {
         defaultServiceCenter.lock.lock();
@@ -161,6 +164,9 @@ public class MMServiceCenter {
         }
     }
 
+    /**
+     * 程序进入后台调用
+     */
     public static void callEnterBackground()
     {
         defaultServiceCenter.lock.lock();
@@ -176,6 +182,9 @@ public class MMServiceCenter {
         }
     }
 
+    /**
+     * 退出app使用，程序会取消对所有service的持有，并将自己制空
+     */
     public static void callTerminate()
     {
         defaultServiceCenter.lock.lock();
@@ -207,6 +216,10 @@ public class MMServiceCenter {
         }
     }
 
+    /**
+     * 方法的会先调用每个Service的onServiceClearData方法
+     * 如果该Service中的state.isServicePersistent==false，则之后会取消对该Service的持有
+     */
     public static void callClearData()
     {
         defaultServiceCenter.lock.lock();
@@ -224,7 +237,6 @@ public class MMServiceCenter {
                 // remove
                 classArrayList.add(service.getClass());
             }
-
         }
         for (Class<? extends MMServiceInterface> serviceClass : classArrayList)
         {
