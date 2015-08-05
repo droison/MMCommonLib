@@ -1,5 +1,6 @@
 package xyz.mumiao.mmservicecenter;
 
+import android.content.Context;
 import android.support.annotation.Nullable;
 
 import java.util.ArrayList;
@@ -19,6 +20,7 @@ public class MMServiceCenter {
     private static boolean isDebugMode = true;
     private final ReentrantLock lock;
     private HashMap<String, MMServiceInterface> hashMapService;
+    private Context context;
 
     private MMServiceCenter()
     {
@@ -27,10 +29,13 @@ public class MMServiceCenter {
         hashMapService = new HashMap<>();
     }
 
-    public static MMServiceCenter init()
+    public static MMServiceCenter init(Context context)
     {
         if (defaultServiceCenter == null)
+        {
             defaultServiceCenter = new MMServiceCenter();
+            defaultServiceCenter.context = context;
+        }
         return defaultServiceCenter;
     }
 
@@ -65,7 +70,7 @@ public class MMServiceCenter {
             if (obj != null)
             {
                 defaultServiceCenter.hashMapService.put(cls.getName(), obj);
-                obj.onServiceInit();
+                obj.onServiceInit(defaultServiceCenter.context);
             }
             else
             {
@@ -81,6 +86,47 @@ public class MMServiceCenter {
         return obj;
     }
 
+    /**
+     * 除了没有返回值，和上面的getService效果基本一致，用于初始化
+     * @param cls
+     *        需要初始化的Service类
+     * @param context
+     *        初始化的Service时传入的context，如果为空会传入ServiceCenter默认的Context
+     * @param <T>
+     *        泛型，限制cls需要implements MMServiceInterface
+     */
+    public static <T extends MMServiceInterface> void callInitService(Class<T> cls, Context context)
+    {
+        defaultServiceCenter.lock.lock();
+
+        T obj = (T) defaultServiceCenter.hashMapService.get(cls.getName());
+        if (obj == null)
+        {
+            try {
+                obj = cls.newInstance();
+                log("getService:Create service object:" + obj);
+            } catch (InstantiationException e) {
+                log("getService:cls.newInstance()", e);
+            } catch (IllegalAccessException e)
+            {
+                log("getService:cls.newInstance()", e);
+            }
+            if (obj != null)
+            {
+                defaultServiceCenter.hashMapService.put(cls.getName(), obj);
+                obj.onServiceInit(context != null? context: defaultServiceCenter.context);
+            }
+        }
+        defaultServiceCenter.lock.unlock();
+    }
+
+    /**
+     * 在MMServiceCenter中移除对该Service的持有
+     * @param cls
+     *        需要remove的Service类
+     * @param <T>
+     *        泛型，限制cls需要implements MMServiceInterface
+     */
     public static <T extends MMServiceInterface> void removeService(Class<T> cls)
     {
         defaultServiceCenter.lock.lock();

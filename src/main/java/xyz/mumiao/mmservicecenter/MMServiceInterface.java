@@ -1,5 +1,7 @@
 package xyz.mumiao.mmservicecenter;
 
+import android.content.Context;
+
 /**
  * Created by song on 15/6/14.
  */
@@ -7,7 +9,7 @@ public interface MMServiceInterface {
 
     MMServiceState getServiceState();
     // call after yourservice create.
-    void onServiceInit();
+    void onServiceInit(Context context);
     // 切换帐号后，调用。
     void onServiceReloadData();
     // 进入后台运行

@@ -1,5 +1,7 @@
 package xyz.mumiao.mmservicecenter;
 
+import android.content.Context;
+
 /**
  * Created by song on 15/6/15.
  */
@@ -13,7 +15,7 @@ public abstract class MMService implements MMServiceInterface{
     }
 
     @Override
-    public void onServiceInit() {
+    public void onServiceInit(Context context) {
 
     }
 
