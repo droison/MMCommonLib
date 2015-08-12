@@ -8,6 +8,7 @@ import android.content.Context;
 public abstract class MMService implements MMServiceInterface{
 
     protected MMServiceState state = new MMServiceState();
+    protected final String TAG = getClass().getSimpleName();
 
     @Override
     public MMServiceState getServiceState() {
