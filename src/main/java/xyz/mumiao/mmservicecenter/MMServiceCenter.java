@@ -72,16 +72,9 @@ public class MMServiceCenter {
                 defaultServiceCenter.hashMapService.put(cls.getName(), obj);
                 obj.onServiceInit(defaultServiceCenter.context);
             }
-            else
-            {
-                defaultServiceCenter.lock.unlock();
-            }
 
         }
-        else
-        {
-            defaultServiceCenter.lock.unlock();
-        }
+        defaultServiceCenter.lock.unlock();
 
         return obj;
     }
