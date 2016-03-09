@@ -186,12 +186,21 @@ public class MMServiceCenter {
 
         Iterator<MMServiceInterface> iterator = arrayCopy.iterator();
 
+        List<Class<? extends MMServiceInterface>> classArrayList = new ArrayList<>();
         while (iterator.hasNext())
         {
             MMServiceInterface service = iterator.next();
             service.onServiceTerminate();
+            if (!service.getServiceState().isServicePersistent)
+            {
+                // remove
+                classArrayList.add(service.getClass());
+            }
         }
-        defaultServiceCenter.hashMapService.clear();
+        for (Class<? extends MMServiceInterface> serviceClass : classArrayList)
+        {
+            removeService(serviceClass);
+        }
     }
 
     public static void callReloadData()
@@ -219,21 +228,10 @@ public class MMServiceCenter {
         Collection<MMServiceInterface> arrayCopy = defaultServiceCenter.hashMapService.values();
         defaultServiceCenter.lock.unlock();
         Iterator<MMServiceInterface> iterator = arrayCopy.iterator();
-
-        List<Class<? extends MMServiceInterface>> classArrayList = new ArrayList<>();
         while (iterator.hasNext())
         {
             MMServiceInterface service = iterator.next();
             service.onServiceClearData();
-            if (!service.getServiceState().isServicePersistent)
-            {
-                // remove
-                classArrayList.add(service.getClass());
-            }
-        }
-        for (Class<? extends MMServiceInterface> serviceClass : classArrayList)
-        {
-            removeService(serviceClass);
         }
     }
 

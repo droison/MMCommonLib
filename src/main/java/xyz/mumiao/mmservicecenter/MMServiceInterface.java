@@ -24,6 +24,6 @@ public interface MMServiceInterface {
     class MMServiceState
     {
         public boolean isServiceRemoved = false;
-        public boolean isServicePersistent = false;
+        public boolean isServicePersistent = false; //退出应用时常驻
     }
 }
